@@ -18,12 +18,6 @@ export const { addNum, decreaseNum, asyncAddNum, asyncDecreaseNum, setNum } = cr
     [numTypes.ASYN_DECREASE_NUM]: null,
 })
 
-console.log(addNum())
-console.log(decreaseNum())
-console.log(asyncAddNum())
-console.log(asyncDecreaseNum())
-console.log(setNum(5))
-
 // 创建saga函数
 
 export const numReducer = handleActions(

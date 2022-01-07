@@ -1,70 +1,26 @@
-# Getting Started with Create React App
+# redux-saga的源码分析
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## 细节
 
-## Available Scripts
+1. 正常情况下，我们都是创建`sagaMiddleware`,然后创建`store`，**sagaMiddleware.run(rootSaga)**(*此时可以传递参数 最终会被rootSaga所接收到*)
+2. 调用当前函数
+    - 如果返回的结果不是一个迭代器 此时saga任务直接结束
+    - 如果是一个迭代器 此时就是会自动run当前迭代器 直至结束
+3. 在run一个迭代器的时候 可能会在yield关键字后面碰到各种情况 **每次迭代的时候 都是会将上一次的数据 携带穿过去的**
+    - effect对象（调用指令 此时就是返回一个effect对象） **实际上是在内部进行处理 根据对象中的type属性 调用不同的处理函数**
+        - 基本构成:
+            1. @@redux-saga/IO: 就是用于标志当前是不是一个Effect对象 ---> 是不是使用了指令
+            2. type: 表示当前使用了那种指令
+            3. payload: 就是使用当前指令的时候 传递了哪些参数
+                - context: this指向问题
+                - fn: 需要执行什么函数
+                - args: 就是表示执行函数的时候 使用哪些参数
+    - promise 此时就是会等待当前promise变成已决 如果是resolved 调用iter.next(resolvedData) 如果是rejected 调用iter.throws(rejectedErr)
+    - 普通数据 直接iter.next(data) ```这个地方和co处理的方式不同 co会统一将yield关键字后面的数据都转换成promise 并等待promise到达状态```
+4. **在我们分发一个action的时候，我们不难发现，分发的action都是立即向后进行传递了**，如果此时触发了saga任务的监听，再执行对应的逻辑即可
+    最佳实践: 在我们需要进行异步的时候，可以分发在reducer中匹配不上的action，然后在异步中获取到数据后，分发真正的action，从而修改在仓库中的数据
+5. 在调用run方法后，会返回一个Task对象（`后面会有用`）
 
-In the project directory, you can run:
+## 代码的细节
 
-### `npm start`
-
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
-
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
-
-### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+1. 很明显在一些saga的指令中会使用到仓库中的数据(dispatch --> put, state ---> select),此时就是需要将store进行传递 ===> 我们可以利用到`bind方法的柯理化和返回一个函数`
