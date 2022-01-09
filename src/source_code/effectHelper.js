@@ -4,12 +4,19 @@
 
 /** 存储所有的saga指令名称 */
 export const types = {
-    CALL: 'CALL',
-}
+    CALL: "CALL",
+    SELECT: "SELECT",
+    PUT: "PUT",
+    TAKE: "TAKE",
+    FORK: "FORK",
+    CANCEL: "CANCEL",
+    TAKEEVERY: "TAKEEVERY",
+    ALL: "ALL"
+};
 
 // 当前字段用于表示是不是saga指令对象
-const flag = '@@redux-saga/IO'
-
+export const sagaFlag = "@@redux-saga/IO";
+export const sagaAction = "@@redux-saga/SAGA_ACTION";
 /**
  * 根据传递的类型创建一个saga对象
  * @param {any} type 类型
@@ -22,15 +29,18 @@ const flag = '@@redux-saga/IO'
  * flag: 用于判断是不是effect对象
  * payload: 就是使用当前指令的时候所调用的函数
  */
-export function createEffectObject(type, payload = { args: [], context: null, fn: null }) {
+export function createEffectObject(
+    type,
+    payload = { args: [], context: null, fn: null }
+) {
     if (!isValidSagaType(type)) {
-        throw new Error('请传递一个有效的sagaType')
+        throw new Error("请传递一个有效的sagaType");
     }
     return {
         type,
-        [flag]: true,
-        payload,
-    }
+        [sagaFlag]: true,
+        payload
+    };
 }
 
 /**
@@ -39,7 +49,7 @@ export function createEffectObject(type, payload = { args: [], context: null, fn
  * @returns {boolean}
  */
 export function isValidSagaType(type) {
-    return Object.values(types).includes(type)
+    return Object.values(types).includes(type);
 }
 /**
  * 判断一个对象是不是saga对象
@@ -48,5 +58,5 @@ export function isValidSagaType(type) {
  */
 
 export function isSagaObject(obj) {
-    return obj && obj[flag]
+    return obj && obj[sagaFlag];
 }
